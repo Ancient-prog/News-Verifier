@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<!-- saved from url=(0047)file:///C:/Users/michael/Downloads/index_4.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>AI News Verifier</title>
+  <link href="./AI News Verifier_files/css2" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #111118;
+      --surface2: #1a1a24;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(255,255,255,0.12);
+      --accent:   #e8ff47;
+      --real:     #39ff8f;
+      --real-dim: rgba(57,255,143,0.1);
+      --fake:     #ff4757;
+      --fake-dim: rgba(255,71,87,0.1);
+      --text:     #f0f0f5;
+      --muted:    #5a5a72;
+      --muted2:   #8888a8;
+      --radius:   16px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bot) + 32px);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-top {
+      position: fixed; top: -120px; left: 50%; transform: translateX(-50%);
+      width: min(500px, 100vw); height: 300px;
+      background: radial-gradient(ellipse, rgba(232,255,71,0.06) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .app {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 520px;
+      display: flex; flex-direction: column;
+    }
+
+    /* Header */
+    .header { padding: 8px 0 28px; }
+
+    .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
+    .logo-icon {
+      width: 36px; height: 36px; background: var(--accent);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .logo-icon svg { width: 20px; height: 20px; }
+
+    .logo-text {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(26px, 6vw, 32px);
+      letter-spacing: 0.04em; color: var(--text); line-height: 1;
+    }
+    .logo-text span { color: var(--accent); }
+
+    .header-sub {
+      font-size: clamp(13px, 3.5vw, 15px); color: var(--muted2);
+      font-weight: 300; line-height: 1.5; max-width: 360px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; position: relative;
+    }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--accent) 40%, transparent 100%);
+      opacity: 0.4;
+    }
+
+    .card-body { padding: clamp(16px, 4vw, 24px); }
+
+    /* Input label */
+    .input-label {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+    }
+    .input-label span {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .char-count { font-size: 11px; color: var(--muted); transition: color 0.2s; }
+    .char-count.warn { color: var(--fake); }
+
+    /* Textarea */
+    textarea {
+      width: 100%; min-height: 130px; max-height: 260px;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; font-family: 'DM Sans', sans-serif;
+      font-size: clamp(14px, 3.8vw, 15px); font-weight: 300; line-height: 1.6;
+      resize: vertical; transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none; display: block; margin-bottom: 14px;
+    }
+    textarea::placeholder { color: var(--muted); }
+    textarea:focus {
+      outline: none; border-color: rgba(232,255,71,0.35);
+      box-shadow: 0 0 0 3px rgba(232,255,71,0.06);
+    }
+
+    /* Helper row */
+    .paste-row { display: flex; gap: 8px; margin-bottom: 14px; }
+
+    .paste-btn {
+      flex: 1; padding: 10px 12px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--muted2); font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center;
+      justify-content: center; gap: 6px; -webkit-appearance: none;
+      touch-action: manipulation;
+    }
+    .paste-btn:active { transform: scale(0.97); }
+    .paste-btn:hover { border-color: var(--border2); color: var(--text); }
+    .paste-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* Analyse button */
+    .analyse-btn {
+      width: 100%; padding: clamp(14px, 4vw, 16px);
+      background: var(--accent); color: #0a0a0f; border: none;
+      border-radius: 10px; font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(17px, 4.5vw, 20px); letter-spacing: 0.08em;
+      cursor: pointer; transition: transform 0.15s, opacity 0.2s, box-shadow 0.2s;
+      position: relative; overflow: hidden; -webkit-appearance: none;
+      touch-action: manipulation;
+    }
+    .analyse-btn:hover:not(:disabled) { box-shadow: 0 0 24px rgba(232,255,71,0.3); }
+    .analyse-btn:active:not(:disabled) { transform: scale(0.98); }
+    .analyse-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .analyse-btn.loading::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+      animation: shimmer 1s infinite;
+    }
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); }
+
+    /* Result panel */
+    #result-panel { display: none; padding: clamp(16px, 4vw, 24px); animation: slideUp 0.3s ease; }
+    #result-panel.show { display: block; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Spinner */
+    .spinner-wrap { display: flex; align-items: center; gap: 12px; color: var(--muted2); font-size: 14px; font-weight: 300; }
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid var(--border2);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Verdict */
+    .verdict-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .verdict-label { font-family: 'Bebas Neue', sans-serif; font-size: clamp(28px, 8vw, 38px); letter-spacing: 0.04em; line-height: 1; display: flex; align-items: center; gap: 10px; }
+    .verdict-icon { font-size: clamp(22px, 6vw, 28px); }
+    .verdict-label.real { color: var(--real); }
+    .verdict-label.fake { color: var(--fake); }
+
+    .confidence-badge { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+    .confidence-badge.real { background: var(--real-dim); color: var(--real); border: 1px solid rgba(57,255,143,0.2); }
+    .confidence-badge.fake { background: var(--fake-dim); color: var(--fake); border: 1px solid rgba(255,71,87,0.2); }
+
+    .bar-track { height: 3px; background: var(--border2); border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
+    .bar-fill { height: 100%; border-radius: 999px; transition: width 0.7s cubic-bezier(0.4,0,0.2,1); }
+    .bar-fill.real { background: linear-gradient(90deg, #1a9e5c, var(--real)); }
+    .bar-fill.fake { background: linear-gradient(90deg, #9e1a28, var(--fake)); }
+
+    .reason-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+    .reason-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .reason-text { font-size: clamp(13px, 3.5vw, 14px); color: var(--muted2); line-height: 1.65; font-weight: 300; }
+
+    .error-box { background: rgba(255,71,87,0.07); border: 1px solid rgba(255,71,87,0.2); border-radius: 10px; padding: 14px 16px; color: #ff8090; font-size: 14px; line-height: 1.5; }
+    .error-box strong { color: var(--fake); display: block; margin-bottom: 4px; }
+
+    .action-btn {
+      width: 100%; margin-top: 12px; padding: 11px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 8px; color: var(--muted2);
+      font-family: 'DM Sans', sans-serif; font-size: 13px;
+      cursor: pointer; transition: all 0.2s; -webkit-appearance: none; touch-action: manipulation;
+    }
+    .action-btn:active { transform: scale(0.98); }
+    .action-btn:hover { border-color: var(--border2); color: var(--text); }
+
+    /* Footer */
+    .footer { margin-top: 24px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+    /* Mobile tweaks */
+    @media (max-width: 480px) {
+      body { padding-top: calc(var(--safe-top) + 12px); }
+      textarea { font-size: 16px; /* prevents iOS auto-zoom */ }
+      .verdict-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+
+    @media (min-width: 600px) {
+      body { padding-top: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="glow-top"></div>
+
+<div class="app">
+
+  <header class="header">
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          <line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line>
+        </svg>
+      </div>
+      <div class="logo-text">AI News<span>Verifier</span></div>
+    </div>
+    <p class="header-sub">Paste any news headline or article to instantly verify its credibility with AI.</p>
+  </header>
+
+  <div class="card">
+    <div class="card-body">
+
+      <div class="input-label">
+        <span>News Text</span>
+        <span class="char-count" id="charCount">0 / 2000</span>
+      </div>
+
+      <textarea id="newsInput" placeholder="Paste a news headline, article snippet, or social media post here..." maxlength="2000" rows="5"></textarea>
+
+      <div class="paste-row">
+        <button class="paste-btn" onclick="pasteFromClipboard()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Paste
+        </button>
+        <button class="paste-btn" onclick="clearInput()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>
+          </svg>
+          Clear
+        </button>
+      </div>
+
+      <button class="analyse-btn" id="analyseBtn" onclick="detectFakeNews()">
+        ANALYSE NEWS
+      </button>
+
+    </div>
+
+    <div class="divider" id="divider" style="display:none;"></div>
+    <div id="result-panel"></div>
+  </div>
+
+  <footer class="footer">
+    Powered by Google Gemini 2.5 &nbsp;·&nbsp; AI analysis only<br>
+    Always verify with trusted sources before sharing.
+  </footer>
+
+</div>
+
+<script>
+  const textarea  = document.getElementById('newsInput');
+  const charCount = document.getElementById('charCount');
+
+  textarea.addEventListener('input', () => {
+    const len = textarea.value.length;
+    charCount.textContent = len + ' / 2000';
+    charCount.classList.toggle('warn', len > 1800);
+  });
+
+  textarea.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) detectFakeNews();
+  });
+
+  async function pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      textarea.value = text;
+      textarea.dispatchEvent(new Event('input'));
+      textarea.focus();
+    } catch {
+      textarea.focus();
+    }
+  }
+
+  function clearInput() {
+    textarea.value = '';
+    textarea.dispatchEvent(new Event('input'));
+    hideResult();
+    textarea.focus();
+  }
+
+  function showResult(html) {
+    const panel   = document.getElementById('result-panel');
+    const divider = document.getElementById('divider');
+    panel.innerHTML = html;
+    panel.classList.add('show');
+    divider.style.display = 'block';
+    setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+  }
+
+  function hideResult() {
+    const panel   = document.getElementById('result-panel');
+    const divider = document.getElementById('divider');
+    panel.classList.remove('show');
+    panel.innerHTML = '';
+    divider.style.display = 'none';
+  }
+
+  async function detectFakeNews() {
+    const input = textarea.value.trim();
+    const btn   = document.getElementById('analyseBtn');
+
+    if (!input) {
+      textarea.style.borderColor = 'rgba(255,71,87,0.5)';
+      setTimeout(() => textarea.style.borderColor = '', 1200);
+      textarea.focus();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.textContent = 'ANALYSING...';
+
+    showResult('<div class="spinner-wrap"><div class="spinner"></div>Gemini is analysing your news\u2026</div>');
+
+    try {
+      const response = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inputs: input })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        showResult(
+          '<div class="error-box"><strong>\u26a0 ' + data.error + '</strong></div>' +
+          '<button class="action-btn" onclick="hideResult()">Dismiss</button>'
+        );
+        return;
+      }
+
+      const label  = data.labels[0];
+      const score  = (data.scores[0] * 100).toFixed(1);
+      const reason = data.reason || '';
+      const isReal = label.toLowerCase().includes('real');
+      const cls    = isReal ? 'real' : 'fake';
+      const icon   = isReal ? '\u2705' : '\ud83d\udea8';
+
+      showResult(
+        '<div class="verdict-row">' +
+          '<div class="verdict-label ' + cls + '">' +
+            '<span class="verdict-icon">' + icon + '</span>' + label +
+          '</div>' +
+          '<span class="confidence-badge ' + cls + '">' + score + '% confident</span>' +
+        '</div>' +
+        '<div class="bar-track"><div class="bar-fill ' + cls + '" id="barFill" style="width:0%"></div></div>' +
+        (reason ? '<div class="reason-box"><div class="reason-label">AI Analysis</div><div class="reason-text">' + reason + '</div></div>' : '') +
+        '<button class="action-btn" onclick="clearInput()">Check Another Article</button>'
+      );
+
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const bar = document.getElementById('barFill');
+        if (bar) bar.style.width = score + '%';
+      }));
+
+    } catch (err) {
+      showResult(
+        '<div class="error-box"><strong>\u26a0 Connection Error</strong>Make sure the Python server is running on port 8000.</div>' +
+        '<button class="action-btn" onclick="hideResult()">Dismiss</button>'
+      );
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.textContent = 'ANALYSE NEWS';
+    }
+  }
+</script>
+
+
+</body></html>
